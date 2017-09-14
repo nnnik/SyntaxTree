@@ -12,6 +12,7 @@ class SyntaxTree
 		{
 			This.parseData := parseData
 			This.__New := This.matchStart
+			This.errors := []
 		}
 		
 		getEnd()
@@ -33,7 +34,6 @@ class SyntaxTree
 		{
 			This.end     := This.start := startPos
 			This.match( mString )
-			This.errors := []
 		}
 		
 		pushError( AdditionalInfo )
@@ -59,12 +59,12 @@ class SyntaxTree
 	class ContainerElement extends SyntaxTree.ValidElement
 	{
 		
-		matchStart( mString, startPos := 1 )
+		__New( parseData* )
 		{
-			This.end     := This.start := startPos
+			This.parseData := parseData
+			This.__New := This.matchStart
 			This.errors := []
 			This.content := []
-			This.match( mString )
 		}
 		
 		tryPush( element, mString )
@@ -105,7 +105,7 @@ class SyntaxTree
 		
 		match( mString )
 		{
-			if ( RegExMatch( mString, "O)" . This.parseData.1, matchObject, This.getStart() ) = This.getStart() )
+			if ( RegExMatch( mString, "O)" . This.parseData.1, matchObject, This.getStart() ) )
 			{
 				This.start   := This.getStart()
 				This.end     := This.getStart() + matchObject.Len( 0 )
