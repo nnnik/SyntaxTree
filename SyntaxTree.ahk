@@ -53,7 +53,6 @@ class SyntaxTree
 		{
 			return ( This.getEnd() = This.getStart() )
 		}
-		
 	}
 	
 	class ContainerElement extends SyntaxTree.ValidElement
@@ -95,7 +94,6 @@ class SyntaxTree
 			if ( removed && element.getEnd() > This.getEnd() )
 				This.end := element.getEnd()
 		}
-		
 	}
 	
 	class WordElement extends SyntaxTree.ValidElement
@@ -142,7 +140,6 @@ class SyntaxTree
 			if This.isEmpty()
 				This.pushError( "Empty Room" )
 		}
-		
 	}
 	
 	class AlternativeElement extends SyntaxTree.ContainerElement
@@ -157,6 +154,10 @@ class SyntaxTree
 			This.pushError( "No match" )
 		}
 		
+		addAlternative( element )
+		{
+			This.parseData.push( element )
+		}
 	}
 	
 	class ConsecutiveElement extends SyntaxTree.ContainerElement
