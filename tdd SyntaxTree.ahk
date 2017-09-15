@@ -13,7 +13,7 @@ valueElement  := new SyntaxTree.AlternativeElement( numberElement )
 
 expressionElement := new SyntaxTree.RoomElement( valueElement, operatorElement )
 
-bracketElement := new SyntaxTree.RoomElement( valueElement, operatorElement, new SyntaxTree.WordElement( "\s*\(" ), new SyntaxTree.WordElement( "\s*\)" ) ) ;Left and right borders
+bracketElement := new SyntaxTree.RoomElement( valueElement, operatorElement, new SyntaxTree.WordElement( "\s*(\+|\-)?\(" ), new SyntaxTree.WordElement( "\s*\)" ) ) ;Left and right borders
 valueElement.addAlternative( bracketElement )
 
 InputBox, TestExpression, Please input a mathematical expression, Please input a mathematical expression 
