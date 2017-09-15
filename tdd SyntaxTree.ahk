@@ -11,10 +11,13 @@ operatorElement := new SyntaxTree.AlternativeElement( operatorList* )
 numberElement := new SyntaxTree.WordElement( "\s*(\+|-)?\d+(\.\d+)?" )
 valueElement  := new SyntaxTree.AlternativeElement( numberElement )
 
-expressionElement := new SyntaxTree.RoomElement( valueElement, operatorElement )
-
 bracketElement := new SyntaxTree.RoomElement( valueElement, operatorElement, new SyntaxTree.WordElement( "\s*(\+|\-)?\(" ), new SyntaxTree.WordElement( "\s*\)" ) ) ;Left and right borders
 valueElement.addAlternative( bracketElement )
+
+expressionElement := new SyntaxTree.RoomElement( valueElement, operatorElement )
+
+functionElement := new SyntaxTree.ConsecutiveElement( new SyntaxTree.WordElement( "\s*(\+|\-)?\w+" ) , new SyntaxTree.RoomElement( expressionElement, new SyntaxTree.WordElement( "\s*\," ), new SyntaxTree.WordElement( "\(" ), new SyntaxTree.WordElement( "\s*\)" ) ) )
+valueElement.addAlternative( functionElement )
 
 InputBox, TestExpression, Please input a mathematical expression, Please input a mathematical expression 
 test  := new expressionElement( TestExpression )
