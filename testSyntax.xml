@@ -1,0 +1,26 @@
+<SyntaxTree>
+	<room id="expression">
+		<cons id="valuesW">
+			<reg id="whitespace">\s*</reg>
+			<reg id="prefix">(\+|-)?</reg>
+			<alt id="value">
+				<reg id="number">\d+(\.\d+)?</reg>
+				<room id="brackets">
+					<cons id="valuesW" />
+					<cons id="operatorsW" />
+					<reg id="leftBracketW">\s*\(</reg>
+					<reg id="rightBracketW">\s*\)</reg>
+				</room>
+			</alt>
+		</cons>
+		<cons id="operatorsW">
+			<reg id="whitespace" />
+			<alt id="operators">
+				<reg id="add">\+</reg>
+				<reg id="sub">\-</reg>
+				<reg id="mul">\*</reg>
+				<reg id="div">\/</reg>
+			</alt>
+		</cons>
+	</room>
+</SyntaxTree>

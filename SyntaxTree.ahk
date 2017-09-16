@@ -53,6 +53,11 @@ class SyntaxTree
 		{
 			return ( This.getEnd() = This.getStart() )
 		}
+		
+		getParseData()
+		{
+			return This.parseData
+		}
 	}
 	
 	class ContainerElement extends SyntaxTree.ValidElement

@@ -1,0 +1,6 @@
+<SyntaxTree>
+	<room id="expression">
+		<reg id="value">\s*(\+|-)?\d+(\.\d+)?</reg>
+		<reg id="operator">\s*(\+|\-|\*|\/)</reg>
+	</room>
+</SyntaxTree>
