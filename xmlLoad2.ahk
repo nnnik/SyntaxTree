@@ -33,6 +33,13 @@ loadSyntaxTreeFromXML( fileName )
 		xmlElement := xmlElementLayers.1.childNodes.item( indexLayers.1 -1 )
 		;Go along structure
 		
+		if ( xmlElement.nodeName = "void" )
+		{
+			elementLayers.1.getParseData()[ indexLayers.1 ] := ""
+			continue
+		}
+		;skip void element
+		
 		if !elementsID.hasKey( elementID := xmlElement.attributes.getNamedItem( "id" ).value )
 		{
 			elementBase := elementNames[ xmlElement.nodeName ]

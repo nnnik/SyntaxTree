@@ -1,0 +1,26 @@
+<SyntaxTree>
+    <room id="multiLine">
+        <room id="expression">
+			<cons id="stringTypesW">
+				<reg id="whiteSpace">\s*</reg>
+				<alt id="valueTypes">
+					<room id="stringApostrophe">
+						<reg id="noApostrophe">\\&apos;|[^&apos;]|&apos;&apos;</reg>
+						<void />
+						<reg id="apostrophe">&apos;</reg>
+						<reg id="apostrophe" />
+					</room>
+					<room id="stringQuote">
+						<reg id="noQuote">\\&quot;|[^&quot;]|&quot;&quot;</reg>
+						<void />
+						<reg id="quote">&quot;</reg>
+						<reg id="quote" />
+					</room>
+					<reg id="variable">[a-zA-Z]\w+</reg>
+				</alt>
+			</cons>
+            <reg id="operators">\s*=</reg>
+        </room>
+        <reg id="newLine">\s*`a</reg>
+    </room>
+</SyntaxTree>
