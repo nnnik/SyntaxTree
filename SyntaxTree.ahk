@@ -282,7 +282,7 @@ class SyntaxTree
 				element := containers.1.content[ indexLayers.1 ]
 				if ( hasValue( childSEID, element.getID() ) )
 					results.push( element )
-				else if ( hasClass( element, SyntaxTree.ContainerElement ) && !hasValue( element.getID(), parentSEID ) )
+				else if ( hasClass( element, SyntaxTree.ContainerElement ) && !hasValue( parentSEID, element.getID() ) )
 					indexLayers.insertAt( 1, 0 ), containers.insertAt( 1, element )
 			}
 		}
