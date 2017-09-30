@@ -1,6 +1,18 @@
 <SyntaxTree>
-	<room id="expression">
-		<reg id="value">\s*(\+|-)?\d+(\.\d+)?</reg>
-		<reg id="operator">\s*(\+|\-|\*|\/)</reg>
+	<room id="expression" min="2">
+		<cons>
+			<alt>
+				<range>\-+</range>
+				<null />
+			</alt>
+			<opt id="numbers" min="1">	
+				<room id="digits">
+					<range>0-9</range>
+				</room>
+				<val>.</val>
+				<room id="digits"/>
+			</opt>
+		</cons>
+		<range id="operators">\-+*/</range>
 	</room>
 </SyntaxTree>
