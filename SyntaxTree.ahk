@@ -1,4 +1,5 @@
 ﻿#Include OOPFunctions.ahk
+#Include classString.ahk
 
 class SyntaxTree
 {
@@ -7,7 +8,7 @@ class SyntaxTree
 	
 	static elementNames := { opt: SyntaxTree.OptionalElement, val:SyntaxTree.ValueElement, nval:SyntaxTree.notValueElement, range:SyntaxTree.RangeElement, nrange:SyntaxTree.notRangeElement, alt:SyntaxTree.AlternativeElement, room:SyntaxTree.RoomElement, cons:SyntaxTree.ConsecutiveElement, null:SyntaxTree.ValidElement }
 	
-	loadFromFile( fileName )
+	__New( fileName )
 	{
 		static xmlObj := ComObjCreate( "Msxml2.DOMDocument.6.0" ), init := xmlObj.async := false
 		xmlObj.load( fileName )
@@ -38,7 +39,7 @@ class SyntaxTree
 			if ( A_Index > 1 )
 				elementLayers.1.getParseData()[ indexLayers.1 ] := element
 			else
-				baseElement := element
+				This.parseData := element
 				;add current element to it's parent
 			
 			if !( ( elementId && definedList[ elementID ] ) || ( hasClass( element, This.ContainerElement ) ? !xmlElement.childNodes.length : !xmlElement.text ) )
@@ -81,12 +82,31 @@ class SyntaxTree
 				;go upwards in the hierachy until you find an unevaluated one
 				
 				if !elementLayers.length()
-					return baseElement
+					break, 2
 				;and if the top of the hierachy is reached return the highestmost 
 			}
 			xmlElement := xmlElementLayers.1.childNodes.item( indexLayers.1 -1 )
 			;Go to the next element
 		}
+		This.__New := This.match
+	}
+	
+	match( string )
+	{
+		This.str := new classString( string )
+		This.document := new This.parseData( This.str )
+	}
+	
+	freeSyntax()
+	{
+		This.parseData.freeSyntax()
+		This.delete( "parseData" )
+	}
+	
+	freeMatch()
+	{
+		This.document.freeMatch()
+		This.delete( "document" )
 	}
 	
 	class ValidElement
@@ -114,12 +134,22 @@ class SyntaxTree
 			return This.content
 		}
 		
-		matchStart( mString, startPos := 1, parent := "" )
+		matchStart( parent := "" )
 		{
-			This.end     := This.start := startPos
-			This.match( mString )
-			This.errors := []
-			This.parent := parent
+			if ( hasClass( parent, SyntaxTree.ValidElement ) )
+			{
+				This.end    := This.start := parent.getEnd()
+				This.str    := parent.str
+				This.parent := parent
+				This.errors := []
+			}
+			else
+			{
+				This.end    := This.start := 1
+				This.str    := parent
+				This.errors := []
+			}
+			This.match()
 		}
 		
 		pushError( AdditionalInfo )
@@ -170,25 +200,51 @@ class SyntaxTree
 		{
 			return This.parent
 		}
+		
+		getText()
+		{
+			return This.str.subStr( This.getStart(), This.getEnd() - This.getStart() )
+		}
+		
+		freeSyntax()
+		{
+			This.Delete( "parseData" )
+		}
+		
+		freeMatched()
+		{
+			This.Delete( "content" )
+		}
 	}
 	
 	class ContainerElement extends SyntaxTree.ValidElement
 	{
 		
-		matchStart( mString, startPos := 1, parent := "" )
+		matchStart( parent := "" )
 		{
-			This.end := This.start := startPos
-			This.errors := []
-			This.content := []
-			This.match( mString )
-			This.parent := parent
+			if hasClass( parent, SyntaxTree.ValidElement )
+			{
+				This.end    := This.start := parent.getEnd()
+				This.str    := parent.str
+				This.parent := parent
+				This.errors  := []
+				This.content := []
+			}
+			else
+			{
+				This.end     := This.start := 1
+				This.str     := parent
+				This.errors  := []
+				This.content := []
+			}
+			This.match()
 		}
 		
-		tryPush( element, mString )
+		tryPush( element )
 		{
 			try 
 			{
-				em := new element( mString, This.getEnd(), This )
+				em := new element( This )
 				if ( isObject( em ) && hasClass( element, SyntaxTree.validElement ) && !em.hasErrors() )
 				{
 					This.directPush( em )
@@ -313,6 +369,28 @@ class SyntaxTree
 			}
 		}
 		
+		freeSyntax()
+		{
+			if ( This.hasKey( "parseData" ) )
+			{
+				toFree := This.parseData
+				This.Delete( "parseData" )
+				for each, SyntaxBase in toFree
+					SyntaxBase.freeSyntax()
+			}
+		}
+		
+		freeMatched()
+		{
+			if ( This.hasKey( "content" ) )
+			{
+				toFree := This.parseData
+				This.Delete( "content" )
+				for each, SyntaxBase in toFree
+					SyntaxBase.freeSyntax()
+			}
+		}
+		
 	}
 	
 	class ValueElement extends SyntaxTree.ValidElement
@@ -320,14 +398,11 @@ class SyntaxTree
 		
 		;__New( value )
 		
-		match( mString )
+		match()
 		{
-			pString := subStr( mString, This.getStart(), strLen( This.parseData.1 ) )
+			pString := This.str.subStr( This.getStart(), strLen( This.parseData.1 ) )
 			if ( This.getCaseSensitive() ? pString == This.parseData.1 : pString = This.parseData.1 )
-			{
-				This.end     := This.getStart() + strLen( This.parseData.1 )
-				This.content := pString
-			}
+				This.end := This.getStart() + strLen( This.parseData.1 )
 			else
 				This.pushError( "Value doesn't match" )
 		}
@@ -349,13 +424,13 @@ class SyntaxTree
 		
 		;__New( value )
 		
-		match( mString )
+		match()
 		{
-			pString := subStr( mString, This.getStart(), strLen( This.parseData.1 ) )
+			pString := This.str.substr( This.getStart(), strLen( This.parseData.1 ) )
 			if ( !( This.getCaseSensitive() ? pString == This.parseData.1 : pString = This.parseData.1 ) )
 			{
-				This.end     := This.getStart() + strLen( char := Chr( Ord( SubStr( pString, 1, 2 ) ) ) )
-				This.content := char
+				This.str.getNextAfter( This.getStart(), length )
+				This.end := This.getStart() + length
 			}
 			else
 				This.pushError( "Value doesn't match" )
@@ -371,27 +446,28 @@ class SyntaxTree
 		static caseSensitive := 1
 		
 		
-		between( min, max, mString, start )
+		between( min, max )
 		{
-			val := Ord( SubStr( mString, start, 2 ) ) ;potential multi code unit encoding
-			return ( ( val >= min ) && ( val <= max ) )
+			val := Ord( This.str.getNextAfter( This.getStart(), length ) ) ;potential multi code unit encoding
+			;Msgbox % min . " < " . val . " < " . max
+			return ( ( val >= min ) && ( val <= max ) ) * length
 		}
 		
-		inGroup( grp, mString, start )
+		inGroup( grp )
 		{
-			val := SubStr( mString, start, 1 )
+			val := This.str.subStr( This.getStart(), 1 )
 			if ( This.getCaseSensitive() )
 			{
 				for each, grpVal in grp
 				{
-					if ( 1 = len := strLen( grpVal ) )
+					if ( 1 = ( len := strLen( grpVal ) ) )
 					{
 						if ( val == grpVal )
 							return 1
 					}
 					else
-						if ( subStr( mString, start, len ) == grpVal )
-							return 1
+						if ( This.str.subStr( This.getStart(), len ) == grpVal )
+							return len
 				}
 			}
 			else
@@ -403,27 +479,29 @@ class SyntaxTree
 							return 1
 					}
 					else
-						if ( subStr( mString, start, len ) = grpVal )
-							return 1
+						if ( This.str.subStr( This.getStart(), len ) = grpVal )
+							return len
 				}
 			return 0
 		}
 		
-		match( mString )
+		match()
 		{
 			pStr := This.parseData.1
 			pos  := 1
 			singleCharGrp := []
 			While ( pos <= strLen( pStr ) )
 			{
-				pos += strLen( char := Chr( Ord( SubStr( pStr, pos, 2 ) ) ) )
+				char := Chr( Ord( SubStr( pStr, pos, 2 ) ) )
+				pos += strLen( char )
 				if ( char = "\" )
 				{
-					pos += strLen( char2 := Chr( Ord( SubStr( pStr, pos, 2 ) ) ) )
-					if ( isObject( grp := This.groups[ char . char2 ] ) )
+					char2 := Chr( Ord( SubStr( pStr, pos, 2 ) ) )
+					pos += strLen( char2 )
+					if ( This.groups.hasKey( char . char2 ) && isObject( grp := This.groups[ char . char2 ] ) )
 					{
-						if ( This.inGroup( grp, mString, This.getStart() ) )
-							return This.foundMatch( mString )
+						if ( length := This.inGroup( grp ) )
+							return This.foundMatch( length )
 						continue
 					}
 					else
@@ -435,23 +513,24 @@ class SyntaxTree
 					if ( subStr( pStr, pos, 1 ) = "\" )
 						pos += 1
 					pos += strLen( Chr( ord2 := Ord( SubStr( pStr, pos, 2 ) ) ) )
-					if ( This.between( ord( char ), ord2, mString, This.getStart() ) )
-						return This.foundMatch( mString )
+					if ( len := This.between( ord( char ), ord2 ) )
+						return This.foundMatch( len )
 					continue
 				}
 				singleCharGrp.Push( char )
 			}
-			if ( This.inGroup( singleCharGrp, mString, This.getStart() ) )
-				return This.foundMatch( mString )
-			This.noMatchFound( mString )
+			if ( len := This.inGroup( singleCharGrp ) )
+				return This.foundMatch( len )
+			This.str.getNextAfter( This.getStart(), len )
+			This.noMatchFound( len )
 		}
 		
-		foundMatch( mString )
+		foundMatch( len )
 		{
-			This.end := This.getStart() + StrLen( This.content := Chr( Ord( subStr( mString, This.getStart(), 2 ) ) ) )
+			This.end := This.getStart() + len
 		}
 		
-		noMatchFound( mString )
+		noMatchFound( len )
 		{
 			This.pushError( "Value out of range" )
 		}
@@ -486,10 +565,10 @@ class SyntaxTree
 		
 		static min := 1
 		
-		match( mString )
+		match()
 		{
 			if ( isObject( This.parseData.4 ) && !isClass( This.parseData.4, SyntaxTree.ValidElement ) )
-				if ( !This.tryPush( This.parseData.4, mString ) )
+				if ( !This.tryPush( This.parseData.4 ) )
 				{
 					This.pushError( "Missing left Border" )
 					return
@@ -498,12 +577,12 @@ class SyntaxTree
 			if ( isObject( This.parseData.2 ) && !isClass( This.parseData.2, SyntaxTree.ValidElement ) )
 			{
 				This.pushPadding( mString )
-				if This.tryPush( This.parseData.1, mString )
+				if This.tryPush( This.parseData.1 )
 				{
 					contentCount++
-					While ( This.pushPadding( mString ) && This.tryPush( This.parseData.2, mString ) )
+					While ( This.pushPadding() && This.tryPush( This.parseData.2 ) )
 					{
-						if !( This.pushPadding( mString ) && This.tryPush( This.parseData.1, mString ) )
+						if !( This.pushPadding() && This.tryPush( This.parseData.1 ) )
 						{
 							This.pushError( "Sperator without following Content" )
 							return
@@ -514,11 +593,11 @@ class SyntaxTree
 				}
 			}
 			else
-				While ( This.pushPadding( mString ) && This.tryPush( This.parseData.1, mString ) )
+				While ( This.pushPadding() && This.tryPush( This.parseData.1 ) )
 					contentCount++
-			This.pushPadding( mString )
+			This.pushPadding()
 			if isObject( This.parseData.5 )
-				if ( !This.tryPush( This.parseData.5, mString ) )
+				if ( !This.tryPush( This.parseData.5 ) )
 				{
 					This.pushError( "Missing right Border" )
 					return
@@ -529,17 +608,17 @@ class SyntaxTree
 				This.pushError( "Room too large" )
 		}
 		
-		pushPadding( mString )
+		pushPadding()
 		{
 			if ( isObject( This.parseData.3 ) && !isClass( This.parseData.3, SyntaxTree.ValidElement ) )
 			{
-				res := This.tryPush( This.parseData.3, mString ) 
+				res := This.tryPush( This.parseData.3 ) 
 				;Msgbox % """" subStr( mString, This.getEnd(), 1 ) """" . "`n" . res . "`n" . disp( This.parseData.3 )
 			}
 			return 1
 		}
 		
-		setMin( min := "" )
+		setMin( min := 1 )
 		{
 			This.min := min
 		}
@@ -565,10 +644,10 @@ class SyntaxTree
 	{
 		;__New( alternatives* )
 		
-		match( mString )
+		match()
 		{
 			for each, alternative in This.parseData
-				if This.tryPush( alternative, mString )
+				if This.tryPush( alternative )
 					return
 			This.pushError( "No match" )
 		}
@@ -579,10 +658,10 @@ class SyntaxTree
 	{
 		;__New( consecutiveElements* )
 		
-		match( mString )
+		match()
 		{
 			for each, follower in This.parseData
-				if !This.tryPush( follower, mString )
+				if !This.tryPush( follower )
 					This.pushError( "Missing Element" )
 		}
 		
@@ -595,10 +674,10 @@ class SyntaxTree
 		
 		static min := 0
 		
-		match( mString )
+		match()
 		{
 			for each, follower in This.parseData
-				if !This.tryPush( follower, mString )
+				if !This.tryPush( follower )
 				{
 					if ( each <= This.getMin() )
 						This.pushError( "Missing Element" )

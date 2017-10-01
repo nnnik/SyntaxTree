@@ -7,32 +7,40 @@ selectFile := ""
 Loop, Files,% A_ScriptFullPath . "\..\*.xml"
 	selectFile .= ( firstFile ? A_LoopFileName : firstFile := A_LoopFileName ) . "|"
 Gui, Add, DropDownList, gSelect vParseMode, % SubStr( selectFile, 1, -1 )
-GuiControl,Choose , ParseMode, 3
+GuiControl,Choose , ParseMode, 4
 Gui, Show
 GoSub, Select
 return
 Eval:
 Gui, Submit, NoHide
-parsedScript :=  new expressionElement( OutPut )
-Msgbox % disp( parsedScript.getElementsBySEID( "numbers" ) )
-Msgbox % showcontent( parsedScript )
+Msgbox % ShowParsedSyntaxTree( new expressionElement( OutPut ) )
 return
 GUIClose:
 ExitApp
 Select:
 GUI, Submit, NoHide
-expressionElement := SyntaxTree.loadFromFile( ParseMode )
-Msgbox % ShowStructure( expressionElement)
+expressionElement := new SyntaxTree( ParseMode )
+;Msgbox % ShowSyntaxTreeStructure( expressionElement )
 return
+
+ShowParsedSyntaxTree( parsedSyntaxTree )
+{
+	return ShowContent( parsedSyntaxTree.document )
+}
 
 ShowContent( parsedSyntaxTree )
 {
-	if !isObject( parsedSyntaxTree.content )
-		return "[" . parsedSyntaxTree.content . "]"
+	if !hasClass( parsedSyntaxTree, SyntaxTree.ContainerElement )
+		return parsedSyntaxTree.getText()
 	s := "["
 	For each, element in parsedSyntaxTree.content
 		s .= showContent( element ) . ", "
 	return SubStr( s, 1, -2 ) . "] "
+}
+
+ShowSyntaxTreeStructure( syntaxTree )
+{
+	return ShowStructure( syntaxTree.parseData )
 }
 
 ShowStructure( parsedSyntaxTree )
