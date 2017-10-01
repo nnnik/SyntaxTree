@@ -22,6 +22,8 @@ class SyntaxTree
 		
 		xmlElement     := xmlObj.documentElement.childNodes.item( 0 )
 		
+		debugElement := [ "Hello World" ]
+		
 		Loop
 		{
 			
@@ -29,6 +31,7 @@ class SyntaxTree
 			{
 				elementBase := This.elementNames[ xmlElement.nodeName ]
 				element := new elementBase()
+				element.debugElement := debugElement
 				if ( elementID )
 					elementsID[ elementID ] := element
 			}
@@ -88,7 +91,7 @@ class SyntaxTree
 			xmlElement := xmlElementLayers.1.childNodes.item( indexLayers.1 -1 )
 			;Go to the next element
 		}
-		This.__New := This.match
+		This.__New    := This.match
 	}
 	
 	match( string )
@@ -97,16 +100,18 @@ class SyntaxTree
 		This.document := new This.parseData( This.str )
 	}
 	
-	freeSyntax()
+	__Delete()
 	{
-		This.parseData.freeSyntax()
-		This.delete( "parseData" )
-	}
-	
-	freeMatch()
-	{
-		This.document.freeMatch()
-		This.delete( "document" )
+		if ( This.hasKey( "document" ) )
+		{
+			This.document.freeMatched()
+			This.delete( "document" )
+		}
+		else
+		{
+			This.parseData.freeSyntax()
+			This.delete( "parseData" )	
+		}
 	}
 	
 	class ValidElement
@@ -213,7 +218,8 @@ class SyntaxTree
 		
 		freeMatched()
 		{
-			This.Delete( "content" )
+			This.Delete( "str" )
+			This.Delete( "parent" )
 		}
 	}
 	
@@ -384,10 +390,12 @@ class SyntaxTree
 		{
 			if ( This.hasKey( "content" ) )
 			{
-				toFree := This.parseData
+				toFree := This.content
+				This.Delete( "str" )
 				This.Delete( "content" )
+				This.Delete( "parent" )
 				for each, SyntaxBase in toFree
-					SyntaxBase.freeSyntax()
+					SyntaxBase.freeMatched()
 			}
 		}
 		

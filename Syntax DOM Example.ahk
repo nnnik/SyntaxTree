@@ -1,5 +1,6 @@
 ﻿#Include SyntaxTree.ahk
 #Persistent
+SetBatchLines, -1
 
 expressionElement := new SyntaxTree( "classSyntax.xml" )
 text := fileOpen( "classSyntax.example", "r" ).Read()
@@ -16,8 +17,3 @@ for each, sMethod in parsed.document.getElementsBySEID( "methodName" )
 	s .= sMethod.getText() . ", "
 Msgbox % s
 ExitApp
-
-ShowText( DOMObject, string )
-{
-	return SubStr( string, start := DOMObject.getStart(), DOMObject.getEnd() - start )
-}
