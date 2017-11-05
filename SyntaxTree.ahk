@@ -6,23 +6,37 @@ class SyntaxTree
 	
 	static debug := 0
 	
-	static elementNames := { opt: SyntaxTree.OptionalElement, val:SyntaxTree.ValueElement, nval:SyntaxTree.notValueElement, range:SyntaxTree.RangeElement, nrange:SyntaxTree.notRangeElement, alt:SyntaxTree.AlternativeElement, room:SyntaxTree.RoomElement, cons:SyntaxTree.ConsecutiveElement, null:SyntaxTree.ValidElement }
+	static elementNames := { parrot: SyntaxTree.ParrotElement, val:SyntaxTree.ValueElement, nval:SyntaxTree.notValueElement, range:SyntaxTree.RangeElement, nrange:SyntaxTree.notRangeElement, alt:SyntaxTree.AlternativeElement, room:SyntaxTree.RoomElement, cons:SyntaxTree.ConsecutiveElement, null:SyntaxTree.ValidElement }
 	
-	__New( fileName )
+	__New( fileNameOrXMLText )
 	{
 		static xmlObj := ComObjCreate( "Msxml2.DOMDocument.6.0" ), init := xmlObj.async := false
-		xmlObj.load( fileName )
+		if FileExist( fileNameOrXMLText )
+			FileRead, fileNameOrXMLText, %fileNameOrXMLText%
+		xmlText := fileNameOrXmlText ;stripIntend( fileNameOrXMLText )
+		xmlObj.loadXML( xmlText )
 		
-		definedList:= {}
-		elementsID := {}
+		xmlObjError := xmlObj.parseError
+		if (  xmlObjError.errorCode )
+			Throw exception( "Error loading SyntaxTree", A_ThisFunc, xmlObjError.reason )
+		
+		definedList  := {}
+		elementsID   := {}
+		elementCount := {}
+		for each, elementTag in This.elementNames
+			elementCount[ each ] := 0
 		
 		xmlElementLayers  := []
 		elementLayers     := []
 		indexLayers       := []
 		
-		xmlElement     := xmlObj.documentElement.childNodes.item( 0 )
+		xmlElement        := xmlObj.documentElement.childNodes.item( 0 )
 		
-		debugElement := [ "Hello World" ]
+		if ( This.debug )
+		{
+			This.debugInfo := {}
+			debugPosInfo   := [ 1 ]
+		}
 		
 		Loop
 		{
@@ -30,31 +44,54 @@ class SyntaxTree
 			if !( ( elementID := xmlElement.attributes.getNamedItem( "id" ).value ) && elementsID.hasKey( elementID ) )
 			{
 				elementBase := This.elementNames[ xmlElement.nodeName ]
+				if !elementID
+					elementID := xmlElement.nodeName . "." . ++elementCount[ xmlElement.nodeName ]
 				element := new elementBase()
-				element.debugElement := debugElement
-				if ( elementID )
-					elementsID[ elementID ] := element
+				element.setID( elementID )
+				elementsID[ elementID ] := element
+				if ( This.debug )
+					This.debugInfo[ elementID ] := { MentionInfo:["reserved"], ChildInfo:[] }
 			}
 			else
 				element := elementsID[ elementID ]
-				;create a new undefined element if it doesn't exist yet otherwise load it from array
+				;create a new undefined element if it doesn't exist yet, load it from an array otherwise
+			
+			isElementDefinition := !( ( elementId && definedList[ elementID ] ) || ( hasClass( element, This.ContainerElement ) ? !xmlElement.childNodes.length : !xmlElement.text ) )
+			;find out whether the current element is a reference or a defintion
+			
+			if This.debug
+			{
+				if isElementDefinition
+					MentionIndex := 1
+				else
+					MentionIndex := This.debugInfo[ elementID ].Mentioninfo.Length() + 1
+				xmlElementText := indentText( xmlElement.xml, debugPosInfo.Length() )
+				startPos := inStr( xmlText, xmlElementText, 0, debugPosInfo.1 )
+				debugPosInfo.1 := startPos + strLen( xmlElementText )
+				This.debugInfo[ elementID ].MentionInfo[ MentionIndex ] := { start: startPos, end: debugPosInfo.1 }
+			}
 			
 			if ( A_Index > 1 )
+			{
 				elementLayers.1.getParseData()[ indexLayers.1 ] := element
+				if This.debug
+					This.debugInfo[ elementLayers.1.getID() ].ChildInfo[ indexLayers.1 ] := { SEID: elementID, MentionIndex: MentionIndex}
+			}
 			else
 				This.parseData := element
 				;add current element to it's parent
 			
-			if !( ( elementId && definedList[ elementID ] ) || ( hasClass( element, This.ContainerElement ) ? !xmlElement.childNodes.length : !xmlElement.text ) )
+			if isElementDefinition
 			{
 				;If the current element is not a reference read it's definition here
-				
+				isDefinition := 1
 				xmlElementAttributes := xmlElement.attributes
 				Loop % xmlElementAttributes.length()
 				{
 					attribute := xmlElementAttributes.item( A_Index-1 )
-					if hasCalleable( element,  "set" . attribute.name )
-						element[ "set" . attribute.name ].call( element, attribute.value )
+					if ( attribute != "id" )
+						if hasCalleable( element,  "set" . attribute.name )
+							element[ "set" . attribute.name ].call( element, attribute.value )
 				}
 				;load element attributes
 				
@@ -65,6 +102,8 @@ class SyntaxTree
 						xmlElementLayers.insertAt( 1, xmlElement )
 						elementLayers.insertAt( 1, element )
 						indexLayers.insertAt( 1, 0 )
+						if This.debug
+							debugPosInfo.insertAt( 1, startPos )
 					;if so push it onto the evaluation stack so that it's children will be the next that get evaluated
 					}
 					else
@@ -82,6 +121,8 @@ class SyntaxTree
 				xmlElementLayers.removeAt( 1 )
 				elementLayers.removeAt( 1 )
 				indexLayers.removeAt( 1 )
+				if This.debug
+					debugPosInfo.removeAt( 1 )
 				;go upwards in the hierachy until you find an unevaluated one
 				
 				if !elementLayers.length()
@@ -96,6 +137,7 @@ class SyntaxTree
 	
 	match( string )
 	{
+		This.document := ""
 		This.str := new classString( string )
 		This.document := new This.parseData( This.str )
 	}
@@ -206,6 +248,16 @@ class SyntaxTree
 			return This.parent
 		}
 		
+		setOpt( optional := "" )
+		{
+			this.optional := optional
+		}
+		
+		getOpt()
+		{
+			return This.optional
+		}
+		
 		getText()
 		{
 			return This.str.subStr( This.getStart(), This.getEnd() - This.getStart() )
@@ -246,14 +298,18 @@ class SyntaxTree
 			This.match()
 		}
 		
-		tryPush( element )
+		tryPush( elementNr )
 		{
+			if SyntaxTree.debug
+				SyntaxTree.startTry( This, elementNr )
 			try 
 			{
+				element := This.parseData[ elementNr ]
 				em := new element( This )
 				if ( isObject( em ) && hasClass( element, SyntaxTree.validElement ) && !em.hasErrors() )
 				{
 					This.directPush( em )
+					SyntaxTree.succeedTry( This, elementNr, em )
 					return 1
 				}
 			}
@@ -261,7 +317,11 @@ class SyntaxTree
 				This.collectError( element, e )
 			if ( isObject( em ) )
 				This.collectErrors( em )
-			return 0
+			SyntaxTree.failTry( This, elementNr, em, e )
+			if element.getOpt()
+				return -1
+			else
+				return 0
 		}
 		
 		directPush( element )
@@ -271,8 +331,6 @@ class SyntaxTree
 				This.content.push( element )
 				This.end := element.getEnd()
 			}
-			if ( removed && element.getEnd() > This.getEnd() )
-				This.end := element.getEnd()
 		}
 		
 		getElementsBySEID( SEID )
@@ -408,9 +466,14 @@ class SyntaxTree
 		
 		match()
 		{
-			pString := This.str.subStr( This.getStart(), strLen( This.parseData.1 ) )
-			if ( This.getCaseSensitive() ? pString == This.parseData.1 : pString = This.parseData.1 )
-				This.end := This.getStart() + strLen( This.parseData.1 )
+			This.matchString( This.parseData.1 )
+		}
+		
+		matchString( matchString )
+		{
+			pString := This.str.subStr( This.getStart(), strLen( matchString ) )
+			if ( This.getCaseSensitive() ? pString == matchString : pString = matchString )
+				This.end := This.getStart() + strLen( matchString )
 			else
 				This.pushError( "Value doesn't match" )
 		}
@@ -442,6 +505,26 @@ class SyntaxTree
 			}
 			else
 				This.pushError( "Value doesn't match" )
+		}
+	}
+	
+	class ParrotElement extends SyntaxTree.ValueElement
+	{
+		match()
+		{
+			parent := This.getParent()
+			While !element := parent.getElementBySEID( This.parseData.1 )
+				if !parent := parent.getParent()
+					break
+			if !( element )
+			{
+				if ( !default )
+					This.pushError( "Lonely Parrot" )
+				else
+					This.matchString( default )
+			}
+			else
+				This.matchString( element.getText() )
 		}
 	}
 	
@@ -565,7 +648,6 @@ class SyntaxTree
 		
 	}
 	
-	
 	class RoomElement extends SyntaxTree.ContainerElement
 	{
 		
@@ -576,7 +658,7 @@ class SyntaxTree
 		match()
 		{
 			if ( isObject( This.parseData.4 ) && !isClass( This.parseData.4, SyntaxTree.ValidElement ) )
-				if ( !This.tryPush( This.parseData.4 ) )
+				if ( !This.tryPush( 4 ) )
 				{
 					This.pushError( "Missing left Border" )
 					return
@@ -585,42 +667,50 @@ class SyntaxTree
 			if ( isObject( This.parseData.2 ) && !isClass( This.parseData.2, SyntaxTree.ValidElement ) )
 			{
 				This.pushPadding( mString )
-				if This.tryPush( This.parseData.1 )
+				if This.tryPush( 1 )
 				{
 					contentCount++
-					While ( This.pushPadding() && This.tryPush( This.parseData.2 ) )
-					{
-						if !( This.pushPadding() && This.tryPush( This.parseData.1 ) )
+					Loop
+					{				
+						This.pushPadding()
+						result  := This.tryPush( 2 )
+						This.pushPadding()
+						result2 := This.tryPush( 1 )
+						if !result2
 						{
-							This.pushError( "Sperator without following Content" )
+							if ( result = 1 )
+								This.pushError( "Sperator without following Content" )
+							else
+								break
 							return
 						}
-						else
-							contentCount++						
+						contentCount++
+						if ( result + result2 = -2 )
+							break
 					}
 				}
 			}
 			else
-				While ( This.pushPadding() && This.tryPush( This.parseData.1 ) )
+				While ( This.pushPadding() && This.tryPush( 1 ) = 1 )
 					contentCount++
 			This.pushPadding()
-			if isObject( This.parseData.5 )
-				if ( !This.tryPush( This.parseData.5 ) )
-				{
-					This.pushError( "Missing right Border" )
-					return
-				}
 			if ( This.getMin() && contentCount < This.getMin() )
 				This.pushError( "Room too small" )
 			else if ( This.getMax() && contentCount > This.getMax() )
 				This.pushError( "Room too large" )
+			if isObject( This.parseData.5 )
+				if ( !This.tryPush( 5 ) )
+				{
+					This.pushError( "Missing right Border" )
+					return
+				}
 		}
 		
 		pushPadding()
 		{
 			if ( isObject( This.parseData.3 ) && !isClass( This.parseData.3, SyntaxTree.ValidElement ) )
 			{
-				res := This.tryPush( This.parseData.3 ) 
+				res := This.tryPush( 3 ) 
 				;Msgbox % """" subStr( mString, This.getEnd(), 1 ) """" . "`n" . res . "`n" . disp( This.parseData.3 )
 			}
 			return 1
@@ -655,39 +745,46 @@ class SyntaxTree
 		match()
 		{
 			for each, alternative in This.parseData
-				if This.tryPush( alternative )
+			{
+				result := This.tryPush( each )
+				if ( result = 1 )
 					return
-			This.pushError( "No match" )
+				else if ( result = -1 )
+					opt := 1
+			}
+			if ( !opt )
+				This.pushError( "No match" )
 		}
 		
 	}
 	
 	class ConsecutiveElement extends SyntaxTree.ContainerElement
 	{
+		
 		;__New( consecutiveElements* )
 		
 		match()
 		{
 			for each, follower in This.parseData
-				if !This.tryPush( follower )
+				if !This.tryPush( each )
 					This.pushError( "Missing Element" )
 		}
 		
 	}
 	
-	class OptionalElement extends SyntaxTree.ConsecutiveElement
+	class OptionlElement extends SyntaxTree.ConsecutiveElement
 	{
 		
-		;__New( consecutiveElements* )
+		;Man fuck this thing
 		
 		static min := 0
 		
 		match()
 		{
 			for each, follower in This.parseData
-				if !This.tryPush( follower )
+				if !This.tryPush( each )
 				{
-					if ( each <= This.getMin() )
+					if ( !( min := This.getMin() ) || each < min )
 						This.pushError( "Missing Element" )
 					else
 						return
@@ -704,5 +801,25 @@ class SyntaxTree
 			This.min := min
 		}
 		
-	}
+	}	
+	
+}
+
+stripIndent( str )
+{
+	out := ""
+	For each,  line in strSplit( str, "`r`n" )
+		out .= trim( line ) . "`r`n"
+	return out
+}
+
+indentText( str, amount )
+{
+	out  := ""
+	out2 := ""
+	Loop %amount%
+		out2 .= "`t"
+	For each,  line in strSplit( str, "`r`n" )
+		out .= out2 . line . "`r`n"
+	return out
 }

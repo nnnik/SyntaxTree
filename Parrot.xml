@@ -1,0 +1,55 @@
+<SyntaxTree>
+	<room id="element" min="0">	
+		<alt id="elementContent">
+			<room id="singleTag">
+				<room id="tagName" />
+				<null />
+				<null />
+				<val>&lt;</val>
+				<cons>
+					<range>\s</range>
+					<cons opt="1">
+						<val>id=&quot;</val>
+						<room id="attributeValue" />
+						<val>&quot;</val>
+						<range>\s</range>
+					</cons>
+					<val>/&gt;</val>
+				</cons>
+			</room>
+			<room id="element" />
+			<room id="text">
+				<alt>
+					<cons>
+						<val>&amp;</val>
+						<room><nval>;</nval></room>
+						<val>;</val>
+					</cons>
+					<nval>&lt;</nval>
+				</alt>
+			</room>
+		</alt>
+		<null />
+		<room><range id="mlw">\s\R</range></room>
+		<room id="openingTag" min="0">
+			<cons id="attribute">
+				<room id="attributeName"><range>a-zA-Z\-</range></room>
+				<val>=&quot;</val>
+				<room id="attributeValue"><nval>&quot;</nval></room>
+				<val>&quot;</val>
+			</cons>
+			<null />
+			<room id="mw"><range>\s</range></room>
+			<cons>
+				<val>&lt;</val>
+				<room id="tagName"><range>a-zA-Z\-</range></room>
+			</cons>
+			<val>&gt;</val>
+		</room>
+		<cons id="closingTag">
+			<val>&lt;/</val>
+			<parrot>tagName</parrot>
+			<val>&gt;</val>
+		</cons>
+	</room>
+</SyntaxTree>

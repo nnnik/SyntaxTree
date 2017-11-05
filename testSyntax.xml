@@ -6,13 +6,13 @@
 				<null />
 			</alt>
 			<alt id="value">
-				<opt id="numbers" min="1">	
+				<cons id="numbers" min="1">	
 					<room id="digits">
 						<range>0-9</range>
 					</room>
 					<val>.</val>
 					<room id="digits"/>
-				</opt>
+				</cons>
 				<room id="brackets">
 					<cons id="values" />
 					<alt id="operators" />

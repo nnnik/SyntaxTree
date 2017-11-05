@@ -1,6 +1,6 @@
 <SyntaxTree>
-    <room id="multiLine">
-        <room id="expression">
+	<room id="multiLine">
+		<room id="expression">
 			<alt id="valueTypes">
 				<room id="stringApostrophe">
 					<alt id="noApostrophe">
@@ -36,6 +36,6 @@
 				<range>\s</range>
 			</room>
 		</room>
-        <range id="newLine">\r</range>
+		<range id="newLine">\r</range>
     </room>
 </SyntaxTree>

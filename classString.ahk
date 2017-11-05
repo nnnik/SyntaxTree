@@ -8,7 +8,9 @@
 	
 	getNextAfter( pos, byref length := "" )
 	{
-		length := strLen( char := chr( ord( This.SubStr( pos, 2 ) ) ) )
+		length := strLen( char := chr( ord( str := This.SubStr( pos, 2 ) ) ) )
+		if ( str == "`r`n" )
+			char := str, length := 2
 		return char
 	}
 	
