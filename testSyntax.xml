@@ -3,10 +3,10 @@
 		<cons id="values">
 			<alt>
 				<range id="prefix">+\-</range>
-				<null />
+				<null/>
 			</alt>
 			<alt id="value">
-				<cons id="numbers" min="1">	
+				<cons id="numbers">	
 					<room id="digits">
 						<range>0-9</range>
 					</room>
@@ -14,9 +14,9 @@
 					<room id="digits"/>
 				</cons>
 				<room id="brackets">
-					<cons id="values" />
-					<alt id="operators" />
-					<room id="whitespace" />
+					<cons id="values"/>
+					<alt id="operators"/>
+					<room id="whitespace"/>
 					<val id="leftBracket">(</val>
 					<val id="rightBracket">)</val>
 				</room>

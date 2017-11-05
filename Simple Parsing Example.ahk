@@ -9,8 +9,9 @@ if !handle
 	ExitApp
 }
 
-Gui, Add, Custom, ClassScintilla x10 y10 w600 h600 vOutPut hwndSciIn
+Gui, Add, Custom, ClassScintilla x10 y10 w600 h600 vOutPut hwndSciIn, 
 ScintillaSetUnicode( SciIn )
+ScintillaSetText( SciIn, "1.1+1.1" )
 
 Gui, Add, Button, gEval, Evaluate
 
@@ -52,7 +53,7 @@ SyntaxTreeStartTry( SyntaxTree, parentElement, childIndex )
 	childInfo := expressionElement.debugInfo[ parentElement.getID() ].ChildInfo[ childIndex ]
 	childPosition := expressionElement.debugInfo[ childInfo.SEID ].MentionInfo[ childInfo.MentionIndex ]
 	ScintillaHighlightText( sciOut, childPosition.start - 1 , childPosition.end - 1 )
-	ScintillaSetPosition( SciIn, parentElement.end )
+	ScintillaSetPosition( SciIn, parentElement.end - 1 )
 	Sleep 1000
 }
 

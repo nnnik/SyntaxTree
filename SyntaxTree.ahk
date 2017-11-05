@@ -67,6 +67,11 @@ class SyntaxTree
 					MentionIndex := This.debugInfo[ elementID ].Mentioninfo.Length() + 1
 				xmlElementText := indentText( xmlElement.xml, debugPosInfo.Length() )
 				startPos := inStr( xmlText, xmlElementText, 0, debugPosInfo.1 )
+				if !startPos
+				{
+					Msgbox % Clipboard := xmlText
+					Msgbox % Clipboard := xmlElementText
+				}
 				debugPosInfo.1 := startPos + strLen( xmlElementText )
 				This.debugInfo[ elementID ].MentionInfo[ MentionIndex ] := { start: startPos, end: debugPosInfo.1 }
 			}
@@ -674,6 +679,8 @@ class SyntaxTree
 					{				
 						This.pushPadding()
 						result  := This.tryPush( 2 )
+						if !result
+							break
 						This.pushPadding()
 						result2 := This.tryPush( 1 )
 						if !result2
