@@ -767,7 +767,6 @@ class SyntaxTree
 			else
 				While ( This.pushPadding() && This.tryPush( 1 ) = 1 )
 					contentCount++
-			This.pushPadding()
 			if ( This.getMin() && contentCount < This.getMin() )
 				This.pushError( "Room too small" )
 			else if ( This.getMax() && contentCount > This.getMax() )

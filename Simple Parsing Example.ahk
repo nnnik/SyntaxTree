@@ -11,12 +11,12 @@ if !handle
 Gui, Add, Custom, ClassScintilla x10 y10 w600 h600 vOutPut hwndSciIn, 
 ScintillaSetUnicode( SciIn )
 ScintillaSetText( SciIn, "1.1+1.1" )
+ScintillaSetHighlight( SciIn, "back", 0xCCCCCC )
 
 Gui, Add, Button, gEval, Evaluate
 
 Gui, Add, Custom, ClassScintilla x620 y10 w600 h600 vInput hwndSciOut
 ScintillaSetUnicode( SciOut )
-ScintillaSetHighlight( SciOut, "back", 0xFF99FF )
 ScintillaSetReadOnly( SciOut, 1 )
 
 selectFile := ""
@@ -50,16 +50,34 @@ class debugHelper
 	
 	startTry( baseTree, parentElement, childIndex )
 	{
-		global sciOut, sciIn
-		element := baseTree.debugInfo[ parentElement.parseData[ childIndex ].getID() ].MentionInfo.1
-		;Msgbox % 
-		ScintillaHighlightText( sciOut, element.start - 1, element.end - 1 )
-		ScintillaSetPosition( SciIn, parentElement.end - 1 )
-		Sleep 1000
+		global SciOut, SciIn
+		ScintillaSetHighlight( SciOut, "back", 0xFF9999 )
+		element := baseTree.debugInfo[ parentElement.parseData[ childIndex ].getID() ].MentionInfo[ baseTree.debugInfo[ parentElement.getID() ].ChildInfo[ childIndex ].MentionIndex ]
+		ScintillaHighlightText( SciOut, element.start - 1, element.end - 1 )
+		ScintillaHighlightText( SciIn, 0, parentElement.end - 1 )
+		Sleep 500
+	}
+	
+	succeedTry( baseTree, parentElement, childIndex, em )
+	{
+		global SciOut, SciIn
+		ScintillaSetHighlight( SciOut, "back", 0x99FF99 )
+		element := baseTree.debugInfo[ parentElement.parseData[ childIndex ].getID() ].MentionInfo[ baseTree.debugInfo[ parentElement.getID() ].ChildInfo[ childIndex ].MentionIndex ]
+		ScintillaHighlightText( SciOut, element.start - 1, element.end - 1 )
+		ScintillaHighlightText( SciIn, 0, parentElement.end - 1 )
+		Sleep 500
+	}
+	
+	failTry( baseTree, parentElement, childIndex, em, e )
+	{
+		global SciOut
+		element := baseTree.debugInfo[ parentElement.parseData[ childIndex ].getID() ].MentionInfo[ baseTree.debugInfo[ parentElement.getID() ].ChildInfo[ childIndex ].MentionIndex ]
+		ScintillaHighlightText( SciOut, element.start - 1, element.end - 1 )
+		ScintillaSetHighlight( SciOut, "back", 0x9999FF )
+		Sleep 500
 	}
 	
 }
-
 
 ShowParsedSyntaxTree( parsedSyntaxTree )
 {
@@ -133,7 +151,7 @@ ShowStructure( parsedSyntaxTree )
 
 ScintillaSetReadOnly( sci, readOnly )
 {
-	PostMessage, 2171, %readOnly%, 0, , ahk_id %SciOut%
+	SendMessage, 2171, %readOnly%, 0, , ahk_id %sci%
 }
 
 ScintillaSetUnicode( sci )

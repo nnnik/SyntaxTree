@@ -1,9 +1,9 @@
 <SyntaxTree>
 	<room id="expression">
 		<cons id="values">
-			<alt>
-				<range id="prefix">+\-</range>
-				<null/>
+			<alt id="prefix" opt="1">
+				<val>+</val>
+				<val>-</val>
 			</alt>
 			<alt id="value">
 				<cons id="numbers">	
