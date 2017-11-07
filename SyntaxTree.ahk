@@ -4,16 +4,16 @@
 class SyntaxTree
 {
 	
-	static debug := 0
-	
 	static elementNames := { parrot: SyntaxTree.ParrotElement, val:SyntaxTree.ValueElement, nval:SyntaxTree.notValueElement, range:SyntaxTree.RangeElement, nrange:SyntaxTree.notRangeElement, alt:SyntaxTree.AlternativeElement, room:SyntaxTree.RoomElement, cons:SyntaxTree.ConsecutiveElement, null:SyntaxTree.ValidElement }
 	
 	__New( fileNameOrXMLText )
 	{
 		static xmlObj := ComObjCreate( "Msxml2.DOMDocument.6.0" ), init := xmlObj.async := false
 		if FileExist( fileNameOrXMLText )
-			FileRead, fileNameOrXMLText, %fileNameOrXMLText%
-		xmlText := fileNameOrXmlText ;stripIntend( fileNameOrXMLText )
+			FileRead, xmlText, %fileNameOrXMLText%
+		else
+			xmlText := fileNameOrXmlText, fileNameOrXmlText := 0
+		This.xmlText := xmlText
 		xmlObj.loadXML( xmlText )
 		
 		xmlObjError := xmlObj.parseError
@@ -32,12 +32,6 @@ class SyntaxTree
 		
 		xmlElement        := xmlObj.documentElement.childNodes.item( 0 )
 		
-		if ( This.debug )
-		{
-			This.debugInfo := {}
-			debugPosInfo   := [ 1 ]
-		}
-		
 		Loop
 		{
 			
@@ -49,8 +43,6 @@ class SyntaxTree
 				element := new elementBase()
 				element.setID( elementID )
 				elementsID[ elementID ] := element
-				if ( This.debug )
-					This.debugInfo[ elementID ] := { MentionInfo:["reserved"], ChildInfo:[] }
 			}
 			else
 				element := elementsID[ elementID ]
@@ -59,29 +51,9 @@ class SyntaxTree
 			isElementDefinition := !( ( elementId && definedList[ elementID ] ) || ( hasClass( element, This.ContainerElement ) ? !xmlElement.childNodes.length : !xmlElement.text ) )
 			;find out whether the current element is a reference or a defintion
 			
-			if This.debug
-			{
-				if isElementDefinition
-					MentionIndex := 1
-				else
-					MentionIndex := This.debugInfo[ elementID ].Mentioninfo.Length() + 1
-				xmlElementText := indentText( xmlElement.xml, debugPosInfo.Length() )
-				startPos := inStr( xmlText, xmlElementText, 0, debugPosInfo.1 )
-				if !startPos
-				{
-					Msgbox % Clipboard := xmlText
-					Msgbox % Clipboard := xmlElementText
-				}
-				debugPosInfo.1 := startPos + strLen( xmlElementText )
-				This.debugInfo[ elementID ].MentionInfo[ MentionIndex ] := { start: startPos, end: debugPosInfo.1 }
-			}
 			
 			if ( A_Index > 1 )
-			{
 				elementLayers.1.getParseData()[ indexLayers.1 ] := element
-				if This.debug
-					This.debugInfo[ elementLayers.1.getID() ].ChildInfo[ indexLayers.1 ] := { SEID: elementID, MentionIndex: MentionIndex}
-			}
 			else
 				This.parseData := element
 				;add current element to it's parent
@@ -89,14 +61,12 @@ class SyntaxTree
 			if isElementDefinition
 			{
 				;If the current element is not a reference read it's definition here
-				isDefinition := 1
 				xmlElementAttributes := xmlElement.attributes
 				Loop % xmlElementAttributes.length()
 				{
 					attribute := xmlElementAttributes.item( A_Index-1 )
-					if ( attribute != "id" )
-						if hasCalleable( element,  "set" . attribute.name )
-							element[ "set" . attribute.name ].call( element, attribute.value )
+					if ( attribute != "id" && hasCalleable( element,  "set" . attribute.name ) )
+						element[ "set" . attribute.name ].call( element, attribute.value )
 				}
 				;load element attributes
 				
@@ -107,13 +77,10 @@ class SyntaxTree
 						xmlElementLayers.insertAt( 1, xmlElement )
 						elementLayers.insertAt( 1, element )
 						indexLayers.insertAt( 1, 0 )
-						if This.debug
-							debugPosInfo.insertAt( 1, startPos )
 					;if so push it onto the evaluation stack so that it's children will be the next that get evaluated
 					}
 					else
 						element.getParseData().1 := xmlElement.text ;otherwise define a text element
-					
 				}
 				if ( elementID )
 					definedList[ elementID ] := 1 ;set an element as defined
@@ -126,8 +93,6 @@ class SyntaxTree
 				xmlElementLayers.removeAt( 1 )
 				elementLayers.removeAt( 1 )
 				indexLayers.removeAt( 1 )
-				if This.debug
-					debugPosInfo.removeAt( 1 )
 				;go upwards in the hierachy until you find an unevaluated one
 				
 				if !elementLayers.length()
@@ -138,6 +103,72 @@ class SyntaxTree
 			;Go to the next element
 		}
 		This.__New    := This.match
+	}
+	
+	enableDebugging( callBackProvider )
+	{
+		if !This.hasKey( "parseData" )
+			return -1
+		This.generateDebugInfo()
+		This.parseData.enableDebugging( callBackProvider, This )
+		This.debug := 1
+	}
+	
+	generateDebugInfo()
+	{
+		helper := This.getDebugHelper()
+		Try
+			instance := new helper( This.xmlText )
+		if !isObject( instance )
+			return
+		This.debugInfo  := {}
+		indexLayers     := []
+		XElementLayers  := []
+		SElementLayers  := []
+		currentXElement := instance.document.getChildBySEID( "tag"  )
+		currentSElement := This.parseData
+		Loop
+		{
+			elementID := currentSElement.getID()
+			if !This.debugInfo.hasKey( elementID )
+				This.debugInfo[ elementID ] := debugInfo := { MentionInfo:["reserved"] }
+			else
+				debugInfo := This.debugInfo[ elementID ]
+			isDefinition := currentXElement.content.1.getID() = "containingTag"
+			
+			debugInfo.MentionInfo[ mentionIndex := debugInfo.MentionInfo.Length() * ( !isDefinition ) + 1 ] := { start: currentXElement.getStart(), end: currentXElement.getEnd() }
+			if ( A_Index > 1 )
+				This.debugInfo[ SELementLayers.1.getId() ].ChildInfo.Push( {SEID:elementID, MentionIndex:MentionIndex} )
+			
+			if ( isDefinition && hasClass( currentSElement, SyntaxTree.ContainerElement ) )
+			{
+				debugInfo.ChildInfo := []
+				XElementLayers.insertAt( 1, currentXElement )
+				SElementLayers.insertAt( 1, currentSElement )
+				indexLayers.insertAt( 1, 0 )
+			}
+			
+			While !( ++indexLayers.1 <= SELementLayers.1.getParseData().length() )
+			{
+				indexLayers.removeAt( 1 )
+				SElementLayers.removeAt( 1 )
+				XElementLayers.removeAt( 1 )
+				if !indexLayers.Length()
+					break, 2
+			}
+			
+			currentXElement := XElementLayers.1.getChildrenBySEID( "tag" )[ indexLayers.1 ]
+			currentSElement := SELementLayers.1.getParseData()[ indexLayers.1 ]
+			
+		}
+	}
+	
+	getDebugHelper()
+	{
+		static debugHelper
+		if !debugHelper
+			debugHelper := new SyntaxTree( "debug.xml" )
+		return debugHelper
 	}
 	
 	match( string )
@@ -305,8 +336,6 @@ class SyntaxTree
 		
 		tryPush( elementNr )
 		{
-			if SyntaxTree.debug
-				SyntaxTree.startTry( This, elementNr )
 			try 
 			{
 				element := This.parseData[ elementNr ]
@@ -314,7 +343,6 @@ class SyntaxTree
 				if ( isObject( em ) && hasClass( element, SyntaxTree.validElement ) && !em.hasErrors() )
 				{
 					This.directPush( em )
-					SyntaxTree.succeedTry( This, elementNr, em )
 					return 1
 				}
 			}
@@ -322,16 +350,55 @@ class SyntaxTree
 				This.collectError( element, e )
 			if ( isObject( em ) )
 				This.collectErrors( em )
-			SyntaxTree.failTry( This, elementNr, em, e )
 			if element.getOpt()
 				return -1
 			else
 				return 0
 		}
 		
+		tryPushDebug( baseTree, thisElement, elementNr )
+		{
+			baseTree := Object( baseTree )
+			This.startTry( baseTree, thisElement, elementNr )
+			try 
+			{
+				element := thisElement.parseData[ elementNr ]
+				em := new element( thisElement )
+				if ( isObject( em ) && hasClass( element, SyntaxTree.validElement ) && !em.hasErrors() )
+				{
+					thisElement.directPush( em )
+					This.succeedTry( baseTree, thisElement, elementNr, em )
+					return 1
+				}
+			}
+			catch e
+				thisElement.collectError( element, e )
+			if ( isObject( em ) )
+				thisElement.collectErrors( em )
+			This.failTry( baseTree, thisElement, elementNr, em, e )
+			if element.getOpt()
+				return -1
+			else
+				return 0
+		}
+		
+		enableDebugging( callBackProvider, baseTree )
+		{
+			tryPushDebug := This.tryPushDebug.bind( callBackProvider, &baseTree )
+			This.debugFunction( tryPushDebug )
+		}
+		
+		debugFunction( tryPushDebug )
+		{
+			This.tryPush := tryPushDebug
+			For each, children in This.parseData
+				if ( hasClass( children, SyntaxTree.ContainerElement ) && !children.hasKey( "tryPush" ) )
+					children.debugFunction( tryPushDebug )
+		}
+		
 		directPush( element )
 		{
-			if ( SyntaxTree.debug || !element.isEmpty() ) 
+			if ( !element.isEmpty() ) 
 			{
 				This.content.push( element )
 				This.end := element.getEnd()
@@ -431,7 +498,7 @@ class SyntaxTree
 						return 
 				}
 				element := containers.1.content[ indexLayers.1 ]
-				if ( hasValue( childSEID, This.getID() ) )
+				if ( hasValue( childSEID, element.getID() ) )
 					return element
 				else if ( hasClass( element, SyntaxTree.ContainerElement ) && !hasValue( element.getID(), parentSEID ) )
 					indexLayers.insertAt( 1, 0 ), containers.insertAt( 1, element )

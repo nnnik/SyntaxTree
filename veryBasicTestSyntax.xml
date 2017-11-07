@@ -1,12 +1,16 @@
 <SyntaxTree>
 	<room id="expression" min="2">
-		<cons min="2">
+		<cons>
 			<range opt="1">\-+</range>
-			<room id="digits">
+			<room>
 				<range>0-9</range>
 			</room>
-			<val>.</val>
-			<room id="digits"/>
+			<cons opt="1">
+				<val>.</val>
+				<room>
+					<range>0-9</range>
+				</room>
+			</cons>
 		</cons>
 		<range id="operators">\-+*/</range>
 	</room>

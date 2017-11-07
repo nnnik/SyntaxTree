@@ -1,7 +1,6 @@
 ﻿#Include SyntaxTree.ahk
 #Persistent
-SyntaxTree.debug := 1
-SyntaxTree.StartTry := func( "SyntaxTreeStartTry" )
+
 handle := DllCall( "LoadLibrary", "Str", "SciLexer.dll" )
 if !handle
 {
@@ -38,24 +37,29 @@ GUIClose:
 ExitApp
 Select:
 GUI, Submit, NoHide
-text := fileOpen( ParseMode, "r" ).Read()
-ScintillaSetReadOnly( SciOut, 0 )
-ScintillaSetText( SciOut, text )
-ScintillaSetReadOnly( SciOut, 1 )
 expressionElement := new SyntaxTree( ParseMode )
+expressionElement.enableDebugging( debugHelper )
+ScintillaSetReadOnly( SciOut, 0 )
+ScintillaSetText( SciOut, expressionElement.xmlText )
+ScintillaSetReadOnly( SciOut, 1 )
 ;Msgbox % disp( expressionElement.debugInfo )
 return
 
-
-SyntaxTreeStartTry( SyntaxTree, parentElement, childIndex )
+class debugHelper
 {
-	global expressionElement, SciOut, SciIn
-	childInfo := expressionElement.debugInfo[ parentElement.getID() ].ChildInfo[ childIndex ]
-	childPosition := expressionElement.debugInfo[ childInfo.SEID ].MentionInfo[ childInfo.MentionIndex ]
-	ScintillaHighlightText( sciOut, childPosition.start - 1 , childPosition.end - 1 )
-	ScintillaSetPosition( SciIn, parentElement.end - 1 )
-	Sleep 1000
+	
+	startTry( baseTree, parentElement, childIndex )
+	{
+		global sciOut, sciIn
+		element := baseTree.debugInfo[ parentElement.parseData[ childIndex ].getID() ].MentionInfo.1
+		;Msgbox % 
+		ScintillaHighlightText( sciOut, element.start - 1, element.end - 1 )
+		ScintillaSetPosition( SciIn, parentElement.end - 1 )
+		Sleep 1000
+	}
+	
 }
+
 
 ShowParsedSyntaxTree( parsedSyntaxTree )
 {
