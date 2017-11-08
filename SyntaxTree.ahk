@@ -110,6 +110,7 @@ class SyntaxTree
 		if !This.hasKey( "parseData" )
 			return -1
 		This.generateDebugInfo()
+		This.callBackProvider := callBackProvider
 		This.parseData.enableDebugging( callBackProvider, This )
 		This.debug := 1
 	}
@@ -175,7 +176,18 @@ class SyntaxTree
 	{
 		This.document := ""
 		This.str := new classString( string )
-		This.document := new This.parseData( This.str )
+		if This.debug
+			This.callBackProvider.startTry( This, 1, This.parseData, 1 )
+		Try
+			This.document := new This.parseData( This.str )
+		catch e
+		{
+			failed := 1
+			if This.debug
+				This.callBackProvider.failTry( This, 1, This.parseData, 1, This.document, e )
+		}
+		if ( This.debug && !failed )
+			This.callBackProvider.succeedTry( This, This.document.end, This.parseData, 1, This.document )
 	}
 	
 	__Delete()
@@ -359,15 +371,16 @@ class SyntaxTree
 		tryPushDebug( baseTree, thisElement, elementNr )
 		{
 			baseTree := Object( baseTree )
-			This.startTry( baseTree, thisElement, elementNr )
+			element := thisElement.parseData[ elementNr ]
+			mentionIndex := baseTree.debugInfo[ thisElement.getID() ].ChildInfo[ elementNr ].mentionIndex
+			This.startTry( baseTree, thisElement.end, element, mentionIndex )
 			try 
 			{
-				element := thisElement.parseData[ elementNr ]
 				em := new element( thisElement )
 				if ( isObject( em ) && hasClass( element, SyntaxTree.validElement ) && !em.hasErrors() )
 				{
 					thisElement.directPush( em )
-					This.succeedTry( baseTree, thisElement, elementNr, em )
+					This.succeedTry( baseTree, thisElement.end, element, mentionIndex, em )
 					return 1
 				}
 			}
@@ -375,7 +388,7 @@ class SyntaxTree
 				thisElement.collectError( element, e )
 			if ( isObject( em ) )
 				thisElement.collectErrors( em )
-			This.failTry( baseTree, thisElement, elementNr, em, e )
+			This.failTry( baseTree, thisElement.end, element, mentionIndex, em, e )
 			if element.getOpt()
 				return -1
 			else

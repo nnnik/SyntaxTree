@@ -12,12 +12,14 @@ Gui, Add, Custom, ClassScintilla x10 y10 w600 h600 vOutPut hwndSciIn,
 ScintillaSetUnicode( SciIn )
 ScintillaSetText( SciIn, "1.1+1.1" )
 ScintillaSetHighlight( SciIn, "back", 0xCCCCCC )
+ScintillaSetHighlight( SciIn, "eolFilled", 1 )
 
 Gui, Add, Button, gEval, Evaluate
 
 Gui, Add, Custom, ClassScintilla x620 y10 w600 h600 vInput hwndSciOut
 ScintillaSetUnicode( SciOut )
 ScintillaSetReadOnly( SciOut, 1 )
+ScintillaSetHighlight( SciOut, "eolFilled", 1 )
 
 selectFile := ""
 Loop, Files,% A_ScriptFullPath . "\..\*.xml"
@@ -30,6 +32,7 @@ return
 Eval:
 Gui, Submit, NoHide
 ScintillaSetReadOnly( SciIn, 1 )
+ScintillaSetEmptySelection( SciIn, 1 )
 Msgbox % ShowParsedSyntaxTree( new expressionElement( OutPut ) )
 ScintillaSetReadOnly( SciIn, 0 )
 return
@@ -48,31 +51,31 @@ return
 class debugHelper
 {
 	
-	startTry( baseTree, parentElement, childIndex )
+	startTry( baseTree, textPos, element, MentionIndex )
 	{
 		global SciOut, SciIn
 		ScintillaSetHighlight( SciOut, "back", 0xFF9999 )
-		element := baseTree.debugInfo[ parentElement.parseData[ childIndex ].getID() ].MentionInfo[ baseTree.debugInfo[ parentElement.getID() ].ChildInfo[ childIndex ].MentionIndex ]
-		ScintillaHighlightText( SciOut, element.start - 1, element.end - 1 )
-		ScintillaHighlightText( SciIn, 0, parentElement.end - 1 )
+		debug := baseTree.debugInfo[ element.getID() ].MentionInfo[ MentionIndex ]
+		ScintillaHighlightText( SciOut, debug.start - 1, debug.end - 1 )
+		ScintillaHighlightText( SciIn, 0, textPos - 1 )
 		Sleep 500
 	}
 	
-	succeedTry( baseTree, parentElement, childIndex, em )
+	succeedTry( baseTree, textPos, element, MentionIndex, em )
 	{
 		global SciOut, SciIn
 		ScintillaSetHighlight( SciOut, "back", 0x99FF99 )
-		element := baseTree.debugInfo[ parentElement.parseData[ childIndex ].getID() ].MentionInfo[ baseTree.debugInfo[ parentElement.getID() ].ChildInfo[ childIndex ].MentionIndex ]
-		ScintillaHighlightText( SciOut, element.start - 1, element.end - 1 )
-		ScintillaHighlightText( SciIn, 0, parentElement.end - 1 )
+		debug := baseTree.debugInfo[ element.getID() ].MentionInfo[ MentionIndex ]
+		ScintillaHighlightText( SciOut, debug.start - 1, debug.end - 1 )
+		ScintillaHighlightText( SciIn, 0, textPos - 1 )
 		Sleep 500
 	}
 	
-	failTry( baseTree, parentElement, childIndex, em, e )
+	failTry( baseTree, textPos, element, MentionIndex, em, e )
 	{
 		global SciOut
-		element := baseTree.debugInfo[ parentElement.parseData[ childIndex ].getID() ].MentionInfo[ baseTree.debugInfo[ parentElement.getID() ].ChildInfo[ childIndex ].MentionIndex ]
-		ScintillaHighlightText( SciOut, element.start - 1, element.end - 1 )
+		debug := baseTree.debugInfo[ element.getID() ].MentionInfo[ MentionIndex ]
+		ScintillaHighlightText( SciOut, debug.start - 1, debug.end - 1 )
 		ScintillaSetHighlight( SciOut, "back", 0x9999FF )
 		Sleep 500
 	}
@@ -182,7 +185,7 @@ ScintillaHighlightText( sci, start, end, level := 1 )
 
 ScintillaSetHighlight( sci, option, value, level := 1 )
 {
-	static options := { italic:2054, underline:2059, bold:2053, font:2056, back:2052, fore:2051 }
+	static options := { italic:2054, underline:2059, bold:2053, font:2056, back:2052, fore:2051, eolFilled:2057 }
 	if !( value * 0 = 0 ) ;value is not numerical
 	{
 		size := StrPut( text , "Utf-8" )
@@ -195,4 +198,9 @@ ScintillaSetHighlight( sci, option, value, level := 1 )
 ScintillaSetPosition( sci, pos )
 {
 	SendMessage, 2141, %pos%, 0, , ahk_id %sci%
+}
+
+ScintillaSetEmptySelection( sci, pos )
+{
+	SendMessage, 2556, %pos%, 0, , ahk_id %sci%
 }
